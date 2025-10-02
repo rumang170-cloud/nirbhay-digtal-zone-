@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nirbhay Digital Zone</title>
+  <style>
+    :root { --accent: #00bcd4; }
+    body {
+      margin:0;font-family:Arial,Helvetica,sans-serif;
+      background:#121212;color:#f0f0f0;
+    }
+    header {
+      background:#1e1e1e;padding:12px 18px;
+      display:flex;align-items:center;justify-content:space-between;
+      position: relative;
+    }
+    header h2 {
+      margin:0;
+    }
+    .user-info {
+      position: absolute;
+      right: 18px;
+      top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+    .user-photo {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #444;
+      object-fit: cover;
+      border: 2px solid var(--accent);
+    }
+    .user-name {
+      font-weight: 700;
+      color: #f0f0f0;
+    }
+    nav a {
+      color:#f0f0f0;margin:0 10px;text-decoration:none;font-weight:700;cursor:pointer;
+    }
+    nav a:hover { color: var(--accent); }
+
+    /* Dropdown styles */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .dropdown > a::after {
+      content: " ▼";
+      font-size: 10px;
+    }
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background: #1e1e1e;
+      min-width: 140px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      z-index: 100;
+      border-radius: 6px;
+      right: 0;
+      top: 100%;
+    }
+    .dropdown-content.show {
+      display: block;
+    }
+    .dropdown-content a {
+      color: #f0f0f0;
+      padding: 10px 14px;
+      text-decoration: none;
+      display: block;
+      cursor: pointer;
+    }
+    .dropdown-content a:hover {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .content{ padding:20px; min-height:360px; position:relative; animation:fadeIn .4s ease; }
+
+    .card-light{ background:#f7f7f7; color:#111; padding:18px; border-radius:8px; width:320px; box-shadow:0 6px 18px rgba(0,0,0,0.12); }
+    input[type="text"], input[type="tel"], input[type="file"], input[type="password"] {
+      padding:10px; width:100%; margin:8px 0; border-radius:6px; border:1px solid #ccc; display:block; box-sizing: border-box;
+    }
+    button {
+      padding:8px 16px; border-radius:6px; border:none; background:var(--accent); color:#000; cursor:pointer;
+    }
+    button:hover { background:#0097a7; }
+
+    .edit-popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #1e1e1e;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.7);
+      z-index: 10000;
+      width: 320px;
+      color: #f0f0f0;
+      display: none;
+      flex-direction: column;
+    }
+    .edit-popup label {
+      margin-top: 10px;
+    }
+    .edit-popup-close {
+      align-self: flex-end;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    @keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+
+    /* Responsive */
+    @media(max-width:480px){
+      .card-light,input{ width:92%; }
+      .content{ padding:12px; }
+      .edit-popup{ width: 90%; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>Nirbhay Digital Zone</h2>
+
+    <!-- User info will show here after login -->
+    <div id="userInfo" class="user-info" title="Click to edit info" onclick="toggleEditPopup()" style="display:none;">
+      <img id="userPhoto" class="user-photo" src="" alt="User Photo" />
+      <div id="userName" class="user-name"></div>
+    </div>
+
+    <nav>
+      <a onclick="navigateTo('home')">Home</a>
+      <a onclick="navigateTo('services')">Services</a>
+      <a onclick="navigateTo('contact')">Contact</a>
+
+      <div class="dropdown" id="loginDropdown">
+        <a id="loginBtn">Login</a>
+        <div class="dropdown-content" id="loginDropdownContent">
+          <a onclick="navigateTo('public'); closeDropdown()">Public Login</a>
+          <a onclick="navigateTo('admin'); closeDropdown()">Admin Login</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main class="content" id="content"></main>
+
+  <!-- Edit Popup -->
+  <div id="editPopup" class="edit-popup">
+    <span class="edit-popup-close" onclick="toggleEditPopup()">×</span>
+    <h3>Edit Your Info</h3>
+    <label for="editName">Naam:</label>
+    <input type="text" id="editName" placeholder="Apna naam likhein" />
+    <label for="editMobile">Mobile No.:</label>
+    <input type="tel" id="editMobile" placeholder="10-digit mobile no." />
+    <label for="editPhoto">Upload Photo:</label>
+    <input type="file" id="editPhoto" accept="image/*" />
+    <button onclick="saveUserInfo()">Save</button>
+  </div>
+
+  <script>
+    let currentUser = null;
+
+    const pages = {
+      home: `
+        <h1>Welcome to Nirbhay Digital Zone</h1>
+        <p>Yahan se login karein.</p>
+      `,
+      services: `
+        <h1>Our Services</h1>
+        <ul><li>Web Development</li><li>Digital Marketing</li><li>Graphic Designing</li><li>SEO Services</li></ul>
+      `,
+      contact: `
+        <h1>Contact Us</h1>
+        <p>Email: contact@nirbhaydigitalzone.com</p>
+        <p>Phone: +91-9876543210</p>
+      `,
+      public: `
+        <div class="card-light">
+          <h2>Public Login</h2>
+          <label>Naam:</label>
+          <input id="publicName" type="text" placeholder="Aapka naam" />
+          <label>Mobile No.:</label>
+          <input id="publicMobile" type="tel" placeholder="10-digit mobile no." />
+          <button onclick="loginPublic()">Login (Name & Mobile)</button>
+        </div>
+      `,
+      admin: `
+        <div class="card-light">
+          <h2>Admin Login</h2>
+          <label>Password:</label>
+          <input id="adminPassword" type="password" placeholder="Admin password" />
+          <button onclick="loginAdmin()">Login</button>
+          <div id="adminMessage" style="margin-top:10px; color:red;"></div>
+        </div>
+      `,
+      dashboard: `
+        <h1>Dashboard</h1>
+        <p>Welcome to your dashboard! Yahan aapka personal content dikhayenge.</p>
+      `
+    };
+
+    function navigateTo(page) {
+      document.getElementById('content').innerHTML = pages[page] || '<p>Page not found</p>';
+      if(page === 'dashboard' && currentUser){
+        showUserInfo();
+      }
+      if(page === 'public'){
+        // Clear input fields on every navigation to public login page
+        document.getElementById('publicName').value = '';
+        document.getElementById('publicMobile').value = '';
+      }
+      if(page === 'admin'){
+        // Clear admin inputs and messages on admin page load
+        document.getElementById('adminPassword').value = '';
+        document.getElementById('adminMessage').textContent = '';
+      }
+    }
+
+    function loginPublic() {
+      const name = document.getElementById('publicName').value.trim();
+      const mobile = document.getElementById('publicMobile').value.trim();
+
+      if (!name || !mobile) {
+        alert('Naam aur mobile number dono bharna zaroori hai.');
+        return;
+      }
+      if (!/^[6-9]\d{9}$/.test(mobile)) {
+        alert('Valid 10-digit Indian mobile number daalein.');
+        return;
+      }
+
+      currentUser = {
+        name: name,
+        mobile: mobile,
+        photo: '' // initially no photo
+      };
+      navigateTo('dashboard');
+      showUserInfo();
+    }
+
+    function loginAdmin() {
+      const password = document.getElementById('adminPassword').value;
+      const adminMsg = document.getElementById('adminMessage');
+
+      // Hardcoded password check (aap isse apni requirement ke hisaab se replace kar sakte hain)
+      if(password === 'admin123') {
+        currentUser = {
+          name: 'Admin',
+          mobile: '',
+          photo: ''
+        };
+        adminMsg.textContent = '';
+        navigateTo('dashboard');
+        showUserInfo();
+      } else {
+        adminMsg.textContent = 'Password galat hai. Dobara try karein.';
+      }
+    }
+
+    function showUserInfo() {
+      const userInfoEl = document.getElementById('userInfo');
+      const userPhotoEl = document.getElementById('userPhoto');
+      const userNameEl = document.getElementById('userName');
+
+      if (currentUser) {
+        userNameEl.textContent = currentUser.name || '';
+        if (currentUser.photo) {
+          userPhotoEl.src = currentUser.photo;
+          userPhotoEl.style.backgroundColor = 'transparent';
+        } else {
+          userPhotoEl.src = ''; // default blank or placeholder
+          userPhotoEl.style.backgroundColor = '#444';
+        }
+        userInfoEl.style.display = 'flex';
+      } else {
+        userInfoEl.style.display = 'none';
+      }
+    }
+
+    // Edit popup toggle
+    function toggleEditPopup() {
+      const popup = document.getElementById('editPopup');
+      if (popup.style.display === 'flex') {
+        popup.style.display = 'none';
+      } else {
+        // Pre-fill values
+        if(currentUser){
+          document.getElementById('editName').value = currentUser.name || '';
+          document.getElementById('editMobile').value = currentUser.mobile || '';
+        }
+        document.getElementById('editPhoto').value = ''; // reset file input
+        popup.style.display = 'flex';
+      }
+    }
+
+    // Save edited info
+    function saveUserInfo() {
+      const name = document.getElementById('editName').value.trim();
+      const mobile = document.getElementById('editMobile').value.trim();
+      const photoInput = document.getElementById('editPhoto');
+
+      if (!name || !mobile) {
+        alert('Naam aur mobile number dono bharna zaroori hai.');
+        return;
+      }
+      if (!/^[6-9]\d{9}$/.test(mobile)) {
+        alert('Valid 10-digit Indian mobile number daalein.');
+        return;
+      }
+
+      currentUser.name = name;
+      currentUser.mobile = mobile;
+
+      if(photoInput.files && photoInput.files[0]){
+        const file = photoInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e){
+          currentUser.photo = e.target.result; // base64 image string
+          showUserInfo();
+          toggleEditPopup();
+        };
+        reader.readAsDataURL(file);
+      } else {
+        showUserInfo();
+        toggleEditPopup();
+      }
+    }
+
+    // Dropdown toggle logic
+    const loginBtn = document.getElementById('loginBtn');
+    const loginDropdownContent = document.getElementById('loginDropdownContent');
+
+    loginBtn.addEventListener('click', function(e){
+      e.stopPropagation(); // prevent event bubbling so document click doesn't immediately close dropdown
+      loginDropdownContent.classList.toggle('show');
+    });
+
+    // Close dropdown if clicked outside
+    document.addEventListener('click', function(){
+      loginDropdownContent.classList.remove('show');
+    });
+
+    // Close dropdown helper
+    function closeDropdown(){
+      loginDropdownContent.classList.remove('show');
+    }
+
+    // Initial load
+    window.onload = function(){
+      navigateTo('home');
+    };
+  </script>
+</body>
+</html>
